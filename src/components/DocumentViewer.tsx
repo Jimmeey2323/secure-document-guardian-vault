@@ -62,6 +62,31 @@ export function DocumentViewer({ files, currentIndex, onClose, onNavigate, sessi
       );
     }
 
+    if (currentFile.type === 'application/pdf') {
+      return (
+        <div
+          className="w-full h-full flex items-center justify-center"
+          style={{ transform: `scale(${zoom})` }}
+        >
+          <iframe
+            src={`${currentFile.url}#toolbar=0&navpanes=0&scrollbar=0`}
+            className="w-full h-full border-0 pointer-events-none select-none"
+            style={{
+              minHeight: '80vh',
+              maxWidth: '100%',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              MozUserSelect: 'none',
+              msUserSelect: 'none',
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
+            title={currentFile.name}
+          />
+        </div>
+      );
+    }
+
     if (currentFile.type.startsWith('text/') || currentFile.content) {
       return (
         <div

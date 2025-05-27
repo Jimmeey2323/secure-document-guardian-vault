@@ -15,7 +15,9 @@ const Index = () => {
 
   const handleFilesUploaded = (files: UploadedFile[]) => {
     setUploadedFiles(files);
-    console.log('Files uploaded:', files.length);
+    if (typeof console !== 'undefined' && console.log) {
+      console.log('Files uploaded:', files.length);
+    }
   };
 
   const handleProcessFiles = () => {
