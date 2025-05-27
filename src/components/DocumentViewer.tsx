@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { UploadedFile } from '@/types/file';
 import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
@@ -70,18 +69,14 @@ export function DocumentViewer({ files, currentIndex, onClose, onNavigate, sessi
         >
           <iframe
             src={`${currentFile.url}#toolbar=0&navpanes=0&scrollbar=0`}
-            className="w-full h-full border-0 pointer-events-none select-none"
+            className="w-full h-full border-0"
             style={{
               minHeight: '80vh',
               maxWidth: '100%',
-              userSelect: 'none',
-              WebkitUserSelect: 'none',
-              MozUserSelect: 'none',
-              msUserSelect: 'none',
+              pointerEvents: 'auto', // Allow interaction with PDF
             }}
-            onContextMenu={(e) => e.preventDefault()}
-            onDragStart={(e) => e.preventDefault()}
             title={currentFile.name}
+            sandbox="allow-same-origin allow-scripts"
           />
         </div>
       );

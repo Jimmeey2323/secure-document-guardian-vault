@@ -17,39 +17,28 @@ export function SecurityManager({ sessionId }: SecurityManagerProps) {
       return false;
     };
 
-    // Comprehensive keyboard shortcut blocking
+    // More selective keyboard shortcut blocking
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Block all Ctrl/Cmd combinations
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        return false;
-      }
+      // Block specific dangerous combinations only
+      const blockedCombinations = [
+        { ctrl: true, shift: true, key: 'I' }, // DevTools
+        { ctrl: true, shift: true, key: 'J' }, // Console
+        { ctrl: true, shift: true, key: 'C' }, // Inspect
+        { ctrl: true, key: 'U' }, // View Source
+        { key: 'F12' }, // DevTools
+      ];
 
-      // Block function keys
-      if (e.key.startsWith('F') && e.key.length > 1) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        return false;
-      }
-
-      // Block specific dangerous keys
-      const blockedKeys = ['PrintScreen', 'Insert', 'Delete', 'Home', 'End', 'PageUp', 'PageDown'];
-      if (blockedKeys.includes(e.key)) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        return false;
-      }
-
-      // Block Alt combinations
-      if (e.altKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        return false;
+      for (const combo of blockedCombinations) {
+        const ctrlMatch = combo.ctrl ? (e.ctrlKey || e.metaKey) : !e.ctrlKey && !e.metaKey;
+        const shiftMatch = combo.shift ? e.shiftKey : !e.shiftKey;
+        const keyMatch = combo.key ? e.key === combo.key : true;
+        
+        if (ctrlMatch && shiftMatch && keyMatch) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          return false;
+        }
       }
     };
 
@@ -77,25 +66,20 @@ export function SecurityManager({ sessionId }: SecurityManagerProps) {
       return false;
     };
 
-    // Enhanced print screen detection
+    // Less aggressive print screen detection
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'PrintScreen') {
         console.log('Print screen detected - clearing clipboard');
-        // Clear clipboard
+        // Clear clipboard only
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText('').catch(() => {});
         }
-        // Blur the screen temporarily
-        document.body.style.filter = 'blur(20px)';
-        setTimeout(() => {
-          document.body.style.filter = 'none';
-        }, 1000);
       }
     };
 
-    // Enhanced developer tools detection
+    // Less aggressive developer tools detection
     let devtools = { open: false };
-    const threshold = 160;
+    const threshold = 200; // Increased threshold to reduce false positives
 
     const detectDevTools = () => {
       const widthThreshold = window.outerWidth - window.innerWidth > threshold;
@@ -106,44 +90,39 @@ export function SecurityManager({ sessionId }: SecurityManagerProps) {
           devtools.open = true;
           console.clear();
           console.log('%cDeveloper tools detected - access blocked', 'color: red; font-size: 20px;');
-          // Blur the entire page
-          document.body.style.filter = 'blur(10px)';
-          document.body.style.pointerEvents = 'none';
+          // Only show warning, don't blur content
+          const warning = document.createElement('div');
+          warning.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 999999;
+            font-family: monospace;
+            font-size: 12px;
+          `;
+          warning.textContent = 'Developer tools detected';
+          document.body.appendChild(warning);
+          
+          setTimeout(() => {
+            if (warning.parentNode) {
+              warning.parentNode.removeChild(warning);
+            }
+          }, 3000);
         }
       } else {
         if (devtools.open) {
           devtools.open = false;
-          document.body.style.filter = 'none';
-          document.body.style.pointerEvents = 'auto';
         }
       }
     };
 
-    // Block window focus loss
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        document.body.style.filter = 'blur(20px)';
-        document.body.style.pointerEvents = 'none';
-      } else {
-        document.body.style.filter = 'none';
-        document.body.style.pointerEvents = 'auto';
-      }
-    };
+    // Remove aggressive window focus/blur handlers that were causing issues
 
-    // Block window blur
-    const handleBlur = () => {
-      document.body.style.filter = 'blur(20px)';
-      document.body.style.pointerEvents = 'none';
-    };
-
-    const handleFocus = () => {
-      if (!devtools.open) {
-        document.body.style.filter = 'none';
-        document.body.style.pointerEvents = 'auto';
-      }
-    };
-
-    // Add comprehensive event listeners
+    // Add selective event listeners
     document.addEventListener('contextmenu', handleContextMenu, true);
     document.addEventListener('keydown', handleKeyDown, true);
     document.addEventListener('keyup', handleKeyUp, true);
@@ -152,25 +131,10 @@ export function SecurityManager({ sessionId }: SecurityManagerProps) {
     document.addEventListener('copy', handleCopy, true);
     document.addEventListener('cut', handleCopy, true);
     document.addEventListener('paste', handleCopy, true);
-    document.addEventListener('visibilitychange', handleVisibilityChange, true);
-    window.addEventListener('blur', handleBlur, true);
-    window.addEventListener('focus', handleFocus, true);
     
-    // Multiple dev tools detection methods
-    const devToolsInterval = setInterval(detectDevTools, 100);
+    // Less frequent dev tools detection
+    const devToolsInterval = setInterval(detectDevTools, 500);
     
-    // Console protection
-    const originalConsole = { ...console };
-    Object.keys(console).forEach(key => {
-      if (typeof console[key as keyof Console] === 'function') {
-        (console as any)[key] = () => {};
-      }
-    });
-
-    // Override common debugging functions
-    (window as any).debugger = undefined;
-    (window as any).console = undefined;
-
     // Cleanup function
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu, true);
@@ -181,13 +145,7 @@ export function SecurityManager({ sessionId }: SecurityManagerProps) {
       document.removeEventListener('copy', handleCopy, true);
       document.removeEventListener('cut', handleCopy, true);
       document.removeEventListener('paste', handleCopy, true);
-      document.removeEventListener('visibilitychange', handleVisibilityChange, true);
-      window.removeEventListener('blur', handleBlur, true);
-      window.removeEventListener('focus', handleFocus, true);
       clearInterval(devToolsInterval);
-      
-      // Restore console
-      Object.assign(console, originalConsole);
       
       // Reset styles
       document.body.style.filter = 'none';
