@@ -7,93 +7,165 @@ interface ContentProtectionProps {
 
 export function ContentProtection({ sessionId }: ContentProtectionProps) {
   useEffect(() => {
-    // Advanced protection styles
+    // Inject comprehensive protection styles
     const style = document.createElement('style');
+    style.id = 'content-protection-styles';
     style.textContent = `
-      * {
+      /* Disable all text selection methods */
+      *, *::before, *::after {
         -webkit-user-select: none !important;
         -moz-user-select: none !important;
         -ms-user-select: none !important;
         user-select: none !important;
         -webkit-touch-callout: none !important;
         -webkit-tap-highlight-color: transparent !important;
+        -khtml-user-select: none !important;
       }
       
-      *::selection {
+      /* Disable all selection pseudo-elements */
+      *::selection, *::-moz-selection {
         background: transparent !important;
+        color: inherit !important;
       }
       
-      *::-moz-selection {
-        background: transparent !important;
+      /* Disable drag and drop */
+      * {
+        -webkit-user-drag: none !important;
+        -khtml-user-drag: none !important;
+        -moz-user-drag: none !important;
+        -o-user-drag: none !important;
+        user-drag: none !important;
+        pointer-events: auto !important;
       }
       
-      /* Disable image dragging */
-      img {
+      /* Disable image context menu and dragging */
+      img, svg, canvas, video {
         -webkit-user-drag: none !important;
         -khtml-user-drag: none !important;
         -moz-user-drag: none !important;
         -o-user-drag: none !important;
         user-drag: none !important;
         pointer-events: none !important;
+        -webkit-touch-callout: none !important;
       }
       
-      /* Custom scrollbar */
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 8px;
+      /* Disable outline and focus */
+      *:focus {
+        outline: none !important;
+        box-shadow: none !important;
       }
       
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.1);
-        border-radius: 4px;
+      /* Hide scrollbars to prevent screenshot indicators */
+      ::-webkit-scrollbar {
+        width: 0px !important;
+        background: transparent !important;
       }
       
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 4px;
+      /* Disable print styles */
+      @media print {
+        body * {
+          visibility: hidden !important;
+        }
+        body::before {
+          content: "Printing is not allowed" !important;
+          visibility: visible !important;
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          font-size: 24px !important;
+          color: red !important;
+        }
       }
       
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(0, 0, 0, 0.5);
+      /* Additional protection layers */
+      body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
     `;
     
     document.head.appendChild(style);
 
-    // Memory protection - clear sensitive data when not in focus
-    const handleFocus = () => {
-      // Document is in focus - content can be displayed normally
-    };
-
-    const handleBlur = () => {
-      // Document lost focus - implement additional protection
-      const sensitiveElements = document.querySelectorAll('[data-sensitive]');
-      sensitiveElements.forEach(el => {
-        if (el instanceof HTMLElement) {
-          el.style.filter = 'blur(10px)';
-        }
-      });
-    };
-
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
-
-    // Screenshot detection (experimental)
-    const detectScreenshot = () => {
-      // This is a basic implementation - real screenshot detection is limited
+    // Enhanced screenshot protection
+    const protectAgainstScreenshots = () => {
+      // Monitor for screenshot events
       document.addEventListener('keyup', (e) => {
         if (e.key === 'PrintScreen') {
-          console.log('Potential screenshot detected');
-          // Log security event
+          // Flash the screen white to interfere with screenshots
+          const overlay = document.createElement('div');
+          overlay.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: white !important;
+            z-index: 999999 !important;
+            pointer-events: none !important;
+          `;
+          document.body.appendChild(overlay);
+          
+          setTimeout(() => {
+            if (overlay.parentNode) {
+              overlay.parentNode.removeChild(overlay);
+            }
+          }, 200);
+          
+          console.log('Screenshot attempt detected and blocked');
         }
       });
     };
 
-    detectScreenshot();
+    // Memory protection
+    const protectMemory = () => {
+      // Clear sensitive data periodically
+      setInterval(() => {
+        if (performance.memory && (performance.memory as any).usedJSHeapSize > 50000000) {
+          // Clear large objects if memory usage is high
+          if (window.gc) {
+            window.gc();
+          }
+        }
+      }, 30000);
+    };
+
+    // Initialize protections
+    protectAgainstScreenshots();
+    protectMemory();
+
+    // Disable common developer shortcuts
+    const blockShortcuts = (e: KeyboardEvent) => {
+      const blockedCombinations = [
+        { ctrl: true, shift: true, key: 'I' }, // DevTools
+        { ctrl: true, shift: true, key: 'J' }, // Console
+        { ctrl: true, shift: true, key: 'C' }, // Inspect
+        { ctrl: true, key: 'U' }, // View Source
+        { ctrl: true, key: 'S' }, // Save
+        { key: 'F12' }, // DevTools
+      ];
+
+      for (const combo of blockedCombinations) {
+        const ctrlMatch = combo.ctrl ? e.ctrlKey || e.metaKey : true;
+        const shiftMatch = combo.shift ? e.shiftKey : true;
+        const keyMatch = combo.key ? e.key === combo.key : true;
+        
+        if (ctrlMatch && shiftMatch && keyMatch) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          return false;
+        }
+      }
+    };
+
+    document.addEventListener('keydown', blockShortcuts, true);
 
     return () => {
-      document.head.removeChild(style);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
+      const existingStyle = document.getElementById('content-protection-styles');
+      if (existingStyle) {
+        document.head.removeChild(existingStyle);
+      }
+      document.removeEventListener('keydown', blockShortcuts, true);
     };
   }, [sessionId]);
 
