@@ -5,6 +5,17 @@ interface ContentProtectionProps {
   sessionId: string;
 }
 
+// Extend the Performance interface to include the non-standard memory property
+interface PerformanceMemory {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+interface ExtendedPerformance extends Performance {
+  memory?: PerformanceMemory;
+}
+
 export function ContentProtection({ sessionId }: ContentProtectionProps) {
   useEffect(() => {
     // Inject comprehensive protection styles
@@ -117,14 +128,16 @@ export function ContentProtection({ sessionId }: ContentProtectionProps) {
       });
     };
 
-    // Memory protection
+    // Memory protection with proper type checking
     const protectMemory = () => {
       // Clear sensitive data periodically
       setInterval(() => {
-        if (performance.memory && (performance.memory as any).usedJSHeapSize > 50000000) {
+        const extendedPerformance = performance as ExtendedPerformance;
+        if (extendedPerformance.memory && extendedPerformance.memory.usedJSHeapSize > 50000000) {
           // Clear large objects if memory usage is high
-          if (window.gc) {
-            window.gc();
+          const globalWindow = window as any;
+          if (globalWindow.gc) {
+            globalWindow.gc();
           }
         }
       }, 30000);
